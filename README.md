@@ -1,125 +1,70 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict, cross_val_predict
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
-
+from sklearn.preprocessing import StandardScaler
+ 
+# Carrega os dados
 df = pd.read_csv("/content/PDFMalware2022_pp.csv", dtype={"Class": int})
-
+ 
+# Exibe informações do dataframe
 df.head()
-
 df.describe()
-
 df.info()
-
-partA, partB = train_test_split(df, test_size=0.9)
-
-  partA.info()
-plt.hist(partA['Class'])
-plt.xlabel('Labels')
-plt.ylabel('Freq')
-plt.show()
-
-partB.info()
-plt.hist(partB['Class'])
-plt.xlabel('Labels')
-plt.ylabel('Freq')
-plt.show()
-
+ 
+# Divide os dados em duas partes (partA e partB)
+partA, partB = train_test_split(df, test_size=0.9, random_state=42)
+ 
+# Separa as features e os rótulos para o treinamento na partA
 y = partA["Class"]
 X = partA.drop("Class", axis=1)
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-k_range = np.arange(1, 150, 2)
-scores = []
-
-for k in k_range:
-  knn = KNeighborsClassifier(n_neighbors=k)
-  score = cross_val_score(knn, X_train, y_train, cv=5, scoring="accuracy").mean()
-  scores.append(score)
-
-  k_range = np.arange(1, 150, 2)
-scores = []
-
-for k in k_range:
-  knn = KNeighborsClassifier(n_neighbors=k)
-  score = cross_val_score(knn, X_train, y_train, cv=5, scoring="accuracy").mean()
-  scores.append(score)
-
-  y = partB["Class"]
+ 
+# Divide os dados de partA em conjuntos de treino e teste
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+ 
+# Normaliza os dados usando StandardScaler
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+ 
+# Define o modelo Perceptron Multicamadas (MLP) com camadas ocultas
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
+])
+ 
+# Compila o modelo com um learning rate menor
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
+ 
+# Define o Early Stopping para evitar overfitting
+early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+ 
+# Treina o modelo
+history = model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
+ 
+# Avalia o modelo na partB
+y = partB["Class"]
 X = partB.drop("Class", axis=1)
-
-clf1 = KNeighborsClassifier(n_neighbors = 3)
-clf1_pred = cross_val_predict(clf1, X, y, cv=10)
-conf_clf1 = confusion_matrix(y, clf1_pred)
-
-clf1 = KNeighborsClassifier(n_neighbors = 3)
-clf1_pred = cross_val_predict(clf1, X, y, cv=10)
-conf_clf1 = confusion_matrix(y, clf1_pred)
-
-clf1 = KNeighborsClassifier(n_neighbors = 7, weights = 'distance', algorithm = 'auto',metric = 'cityblock')
-clf1_pred = cross_val_predict(clf1, X, y, cv=10)
-conf_clf1 = confusion_matrix(y, clf1_pred)
-tn = conf_clf1[0,0]
-tp = conf_clf1[1,1]
-fp = conf_clf1[0,1]
-fn = conf_clf1[1,0]
-
+X = scaler.transform(X)  # Aplica a mesma normalização para partB
+ 
+# Faz previsões com o modelo treinado
+y_pred = (model.predict(X) > 0.5).astype("int32").flatten()
+ 
+# Calcula a matriz de confusão e métricas de avaliação
+conf_clf = confusion_matrix(y, y_pred)
+tn, fp, fn, tp = conf_clf.ravel()
+ 
 print("TN:", tn)
 print("TP:", tp)
 print("FP:", fp)
 print("FN:", fn)
 print()
-print("Accuracy:", accuracy_score(y, clf1_pred)*100)
-print("Precision:", precision_score(y, clf1_pred)*100)
-print("Recall:", recall_score(y, clf1_pred)*100)
+print("Accuracy:", accuracy_score(y, y_pred) * 100)
+print("Precision:", precision_score(y, y_pred) * 100)
+print("Recall:", recall_score(y, y_pred) * 100)
 
-from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold
-from sklearn.metrics import classification_report
+![ac96](https://github.com/user-attachments/assets/f33a0cde-77dd-4394-aaee-581cb0332d96)
 
-knn_params = {
-    "n_neighbors": range(1, 10, 2),
-    "weights": ["uniform", "distance"],
-    "metric": ["euclidean", "manhattan", "minkowski", "cityblock"],
-    "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
-    "n_jobs": [-1],
-    "p": [1, 2],
-    "leaf_size": [15, 30, 45, 60]
-}
-
-knn = KNeighborsClassifier()
-
-seed = 42
-
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=seed)
-grid_search = GridSearchCV(estimator=knn, param_grid=knn_params, n_jobs=-1, cv=cv, scoring="accuracy")
-grid_result = grid_search.fit(X_train, y_train)
-
-best_model = knn.set_params(**grid_result.best_params_)
-best_model.fit(X_train, y_train)
-y_pred = best_model.predict(X_test)
-
-print(classification_report(y_test, y_pred))
-print(confusion_matrix(y_test, y_pred))
-print(grid_result.best_params_)
-
-clf1 = KNeighborsClassifier(n_neighbors = 3, weights = 'distance', algorithm ='ball_tree', leaf_size = 15,  metric = 'manhattan', p = 2, n_jobs = -1)
-clf1_pred = cross_val_predict(clf1, X, y, cv=10)
-conf_clf1 = confusion_matrix(y, clf1_pred)
-tn = conf_clf1[0,0]
-tp = conf_clf1[1,1]
-fp = conf_clf1[0,1]
-fn = conf_clf1[1,0]
-
-print("TN:", tn)
-print("TP:", tp)
-print("FP:", fp)
-print("FN:", fn)
-print()
-print("Accuracy:", accuracy_score(y, clf1_pred)*100)
-print("Precision:", precision_score(y, clf1_pred)*100)
-print("Recall:", recall_score(y, clf1_pred)*100)
-
-![image](https://github.com/user-attachments/assets/1a66fdbc-d013-4e63-ad7a-6d42a3133598)
