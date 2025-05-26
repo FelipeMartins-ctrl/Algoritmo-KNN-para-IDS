@@ -1,3 +1,7 @@
+O seguinte Script Apresentado se trata de um IDS utilizando o algoritmo KNN adicionando o Machine Learning para melhor performace, Para a realização do script é nescessario do seguinte arquivo:
+[Uploading PDFMalware2022_pp.csv…]()
+
+
 import numpy as np
 
 import pandas as pd
@@ -17,6 +21,8 @@ df = pd.read_csv("/content/PDFMalware2022_pp.csv", dtype={"Class": int})
 df.head()
 df.describe()
 df.info()
+![df1](https://github.com/user-attachments/assets/3665e8c9-1fa3-49ec-87da-ad990cd40486)
+
  
 # Divide os dados em duas partes (partA e partB)
 partA, partB = train_test_split(df, test_size=0.9, random_state=42)
@@ -42,7 +48,8 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.Dense(32, activation='relu'),
     tf.keras.layers.Dense(1, activation='sigmoid')  # Saída binária
 ])
- 
+ ![df2](https://github.com/user-attachments/assets/dec3a803-5e61-48d7-a980-f0063ff7faa5)
+
 # Compila o modelo com um learning rate menor
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
@@ -53,7 +60,8 @@ early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5
  
 # Treina o modelo
 history = model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
- 
+ ![df3](https://github.com/user-attachments/assets/95fe641b-5fa2-48e4-8db3-d719a9d37a22)
+
 # Avalia o modelo na partB
 y = partB["Class"]
 
@@ -63,7 +71,8 @@ X = scaler.transform(X)  # Aplica a mesma normalização para partB
  
 # Faz previsões com o modelo treinado
 y_pred = (model.predict(X) > 0.5).astype("int32").flatten()
- 
+ ![df4](https://github.com/user-attachments/assets/5db0b2cd-ede5-47dc-bccf-f29c346b27b0)
+
 # Calcula a matriz de confusão e métricas de avaliação
 conf_clf = confusion_matrix(y, y_pred)
 
