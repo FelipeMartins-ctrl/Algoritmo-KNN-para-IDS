@@ -21,6 +21,8 @@ df = pd.read_csv("/content/PDFMalware2022_pp.csv", dtype={"Class": int})
 df.head()
 df.describe()
 df.info()
+
+
 ![df1](https://github.com/user-attachments/assets/3665e8c9-1fa3-49ec-87da-ad990cd40486)
 
  
